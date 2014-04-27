@@ -23,12 +23,6 @@
 
 		var eventStartWindowYPos;
 		var form = $(this);
-		$.fn.formsweet.formtest = $(this);
-
-		$.fn.formsweet.test = function (e) {
-			console.log('formsweet test');
-		}
-
 		var selidcounter = 0; // select id counter
 
 		$.fn.formsweet.buildselect = function (obj) {
@@ -212,12 +206,13 @@
 			
 			$('.frmswtcheckbox input').change(function() {
 				$(this).closest('.frmswtcheckbox').find('.frmswtcheckboxicon').toggleClass('frmswtcheckboxon');
-				console.log($(this).attr('id')+' hat sich geändert');
-			});
-			$('.frmswtcheckbox').click(function () {
-				console.log('frmswtcheckbox geclickt');
 			});
 
+			$('.frmswtcheckbox').click(function () {
+				var cbx = $(this).find('input[type=checkbox]');
+				cbx.prop('checked', !cbx.prop('checked'));
+				$(this).find('.frmswtcheckboxicon').toggleClass('frmswtcheckboxon');
+			});
 
 		}
 

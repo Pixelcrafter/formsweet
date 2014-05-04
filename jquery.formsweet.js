@@ -4,8 +4,11 @@
 	[ ] - multiple select
 	[x] - optgroups
 
-	[ ] - checkboxes
+	[x] - checkboxes
 	[ ] - radios
+
+	[x] - Prevent double event binding on adding additional elements -> hack: unbind events if plugin is called multiple times
+	[ ] - Optimizing event binding -> make it id based rather than element class based
 
 	[ ] - keyboard accessibility
 
@@ -24,6 +27,7 @@
 		var eventStartWindowYPos;
 		var form = $(this);
 		var selidcounter = 0; // select id counter
+		var cbxidcounter = 0; // checkbox id counter
 
 		$.fn.formsweet.buildselect = function (obj) {
 			/***
@@ -34,11 +38,7 @@
 			var clickedselid;
 			var oldselid;
 
-//			$(obj).find('select').each(function() {
 			var createFrmswtSelectElement = function (o) {
-//				console.log('createFrmswtSelectElement');
-//				console.log($(o));
-//				return;
 				// check if it is not already a formsweet select element an not a multiple select
 				// otherwise create it:
 				if(!$(o).parent().hasClass('frmswtselect') && !$(o).attr('multiple')) {
@@ -47,8 +47,6 @@
 					var elwrapperid = 'frmswtselect' + selidcounter;
 					// wrap select element
 					$(el).wrap('<div id="'+elwrapperid+'" class="frmswtselect"></div>');
-					// visually hide original select element
-//					$(el).css({'position':'absolute', 'left': '-3000px'});
 					// get selected option from original element
 					var initval = $(el).find('option:selected').text();
 					// append new selector code
@@ -67,20 +65,21 @@
 					});
 				}
 			}
-//			});
 
 			if ($(obj).is('select')) {
-//					console.log('Single Element');
-					createFrmswtSelectElement($(obj));
+				createFrmswtSelectElement($(obj));
 			} else {
 				$(obj).find('select').each(function() {
-//					console.log('Init');
-//					console.log($(this));
 					createFrmswtSelectElement($(this));
 				});
 			}
 
-			$('.frmswtselectedelement').click(function(event) {
+
+			// Reset previously bound frmswt events on selectelements
+			$('.frmswtselect select').off('change');
+			$('.frmswtselectedelement, .frmswtselectdropdown li').off('click');
+
+			$('.frmswtselectedelement').on('click', function (event) {
 				event.stopPropagation();
 				clickedselid = getFrmswtSelectId(this);
 				// At first close any previously opened frmswtselect element 
@@ -91,15 +90,17 @@
 				oldselid = clickedselid;
 			});
 
-			$('.frmswtselectdropdown li').not('.frmswtoptgroup').click(function() {
+			$('.frmswtselectdropdown li').not('.frmswtoptgroup').on('click', function() {
 				// var eid = $(this).closest('.frmswtselect').attr('id');
 				var elid = getFrmswtSelectId(this);
 				// set selected value of original select element
 				$('#'+elid+' select').val($(this).attr('data-value')).change();
 				// set select info on new formsweet select element
-				$('#'+elid+' span.frmswtselectedelementvalue').html($(this).text());
-				// remove old selected marker and set new selected marker
+				var dispval = $(this).attr('label') ? $(this).attr('label') : $(this).text();
+				$('#'+elid+' span.frmswtselectedelementvalue').html(dispval);
+				// remove old selected marker
 				$('#'+elid+' li.selected').removeClass('selected');
+				// ... and set new selected marker
 				$(this).addClass('selected');
 				// hide the drop-down
 				hideSelectDropDown($('#'+elid+' .frmswtselectdropdown'));
@@ -125,7 +126,8 @@
 		var createOptionLi = function (el,wrapperid,inoptgroup) {
 			var ttc = $(el).attr('title') ? ' title="'+$(el).attr('title')+'"' : '';
 			var optgroupcl = inoptgroup ? ' frmswtinoptgroup' : '';
-			return '<li class="frmswtoption' + optgroupcl + ' ' + opt.selectelementclass + '" data-value="'+ $(el).val() +'"' + ttc + '>' + $(el).text() + '</li>';
+			var label = $(el).attr('label') ? ' label="'+$(el).attr('label')+'"' : '';
+			return '<li class="frmswtoption' + optgroupcl + ' ' + opt.selectelementclass + '" data-value="'+ $(el).val() +'"' + ttc + label + '>' + $(el).text() + '</li>';
 		}
 
 		var showSelectDropDown = function (el,selid,oldselid) {
@@ -169,60 +171,84 @@
 
 
 
-//		var buildcheckbox = function (f) {
 		$.fn.formsweet.buildcheckbox = function (obj) {
 
-			var cbxidcounter = 0; // checkbox id counter
+			var createFrmswtCheckboxElement = function (o) {
+				if(!$(o).closest('div').hasClass('frmswtcheckbox')) {
 
-			$(obj).find('input[type=checkbox]').each(function() {
-
-				cbxidcounter = cbxidcounter + 1;
-				var el = $(this);
-				var cbxid = el.attr('id');
-				var cbxstateclass = '';
-				var elwrapperid = 'frmswtcheckbox' + cbxidcounter;
-//				console.log(el.attr('id'));
-				var label = obj.find('label[for='+el.attr('id')+']');
-				var altlabel;
-				if (label.length == 0) {
-					altlabel = el.next('label');
-					if (altlabel.length == 0) {
-						altlabel = el.prev('label');
+					cbxidcounter = cbxidcounter + 1;
+					var el = $(o);
+					var cbxid = el.attr('id');
+					var cbxstateclass = '';
+					var elwrapperid = 'frmswtcheckbox' + cbxidcounter;
+					// try to find label with the coresponding 'for' attribute
+					// start searching from two levels up
+					var label = $(o).parent().parent().find('label[for='+el.attr('id')+']');
+					// init var for 'alternative' label if required
+					var altlabel;
+					// if there is no 'for'-label
+					if (label.length == 0) {
+						// get 'next' label
+						altlabel = el.next('label');
+						if (altlabel.length == 0) {
+							// if there is no 'next' label try 'prev' label
+							altlabel = el.prev('label');
+							if (altlabel.length == 0) {
+								altlabel = $(o).closest('label');
+							}
+						}
+						// if alternative label has a 'for'-attribute we assume it is for a different checkbox and ignore them
+						if (!($(altlabel).attr('for'))) {
+							label = altlabel;
+						}
 					}
-				}
-				if (altlabel && !($(altlabel).attr('for'))) {
-					label = altlabel;
-				}
-				if($('#'+cbxid).attr('checked')) {
-					cbxstateclass = ' frmswtcheckboxon';
-				}
-				$(label).wrap('<div id="'+elwrapperid+'" class="frmswtcheckbox"></div>');
-				$(el).prependTo('#'+elwrapperid+' label');
-				$('<span class="frmswtcheckboxicon'+cbxstateclass+'">&nbsp;</span>').prependTo('#'+elwrapperid);
+					if($('#'+cbxid).prop('checked')) {
+						cbxstateclass = ' frmswtcheckboxon';
+					}
+					$(label).wrap('<div id="'+elwrapperid+'" class="frmswtcheckbox"></div>');
+					$(el).prependTo('#'+elwrapperid+' label');
+					$('<span class="frmswtcheckboxicon'+cbxstateclass+'">&nbsp;</span>').prependTo('#'+elwrapperid);
 
-				// <span class="frmswtcheckboxoff"> </span>
+				}
+			}
 
-			});
-			
+			if ($(obj).is('input[type=checkbox]')) {
+				createFrmswtCheckboxElement($(obj));
+			} else {
+				$(obj).find('input[type=checkbox]').each(function() {
+					createFrmswtCheckboxElement($(this));
+				});
+			}
+
+			// Reset previously bound frmswt events on checkboxes to avoid multiple binding
+			$('.frmswtcheckbox input').off('change');
+			$('.frmswtcheckbox').off('click');
+
 			$('.frmswtcheckbox input').change(function() {
-				$(this).closest('.frmswtcheckbox').find('.frmswtcheckboxicon').toggleClass('frmswtcheckboxon');
+				setCheckboxIcon($(this));
 			});
 
-			$('.frmswtcheckbox').click(function () {
-				var cbx = $(this).find('input[type=checkbox]');
+			$('.frmswtcheckbox').on('click','.frmswtcheckboxicon',function () {
+				var cbx = $(this).parent().find('input[type=checkbox]');
 				cbx.prop('checked', !cbx.prop('checked'));
-				$(this).find('.frmswtcheckboxicon').toggleClass('frmswtcheckboxon');
+				setCheckboxIcon(cbx);
 			});
 
+		}
+
+		var setCheckboxIcon = function (el) {
+			if ($(el).prop('checked')) {
+				$(el).closest('.frmswtcheckbox').find('.frmswtcheckboxicon').addClass('frmswtcheckboxon');
+			} else {
+				$(el).closest('.frmswtcheckbox').find('.frmswtcheckboxicon').removeClass('frmswtcheckboxon');
+			}
 		}
 
 		if (opt.styleselect) {
 			$.fn.formsweet.buildselect(form);
-//			buildselect(form);
 		}
 		if (opt.stylecheckbox) {
 			$.fn.formsweet.buildcheckbox(form);
-//			buildcheckbox(form);
 		}
 
 	}

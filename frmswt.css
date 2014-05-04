@@ -23,7 +23,6 @@
 .frmswtcheckbox {
   position: relative;
   display: inline-block;
-  max-width: 20em;
   background-color: #00acb7;
   color: #FFFFFF;
   border-radius: 5px;
@@ -31,18 +30,19 @@
 }
 .frmswtcheckbox input[type='checkbox'] {
   position: absolute;
-  left: -30px;
+  left: -3000px;
 }
 .frmswtcheckbox label {
   display: inline-block;
-  padding: 0.3em 0.8em 0.4em 2.6em;
+  padding: 0.4em 0.8em 0.4em 2.6em;
   float: left;
   font-weight: 700;
+  color: #FFFFFF;
 }
 .frmswtcheckbox .frmswtcheckboxicon {
   float: left;
   background-color: #d3008d;
-  padding: 0.3em 0.5em 0.3em;
+  padding: 0.4em 0.5em 0.3em;
   position: absolute;
   top: 0;
   left: 0;
@@ -81,9 +81,8 @@
   border-radius: 5px;
   padding: 0.3em 2.2em 0.4em 0.6em;
   margin: 0;
-  width: 20em;
-  min-width: 20em;
-  max-width: 100%;
+  min-width: 14em;
+  max-width: 30em;
   cursor: pointer;
   background-color: #00acb7;
   color: #FFFFFF;
@@ -157,7 +156,7 @@
 }
 .frmswtselect ul li.frmswtoptgroup {
   background-color: #009fa9;
-  color: #60ccd3;
+  color: #83eaf1;
   cursor: default;
   font-style: italic;
   padding-left: 0.6em;
